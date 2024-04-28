@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/04/25 21:23:28 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/04/29 01:12:13 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,8 @@
 #include "libft.h"
 #include "MLX42/include/MLX42/MLX42.h"
 
-#define WIDTH 720
-#define HEIGHT 720
+#define WIDTH 1600
+#define HEIGHT 1600
 #define M_PI 3.14159265358979323846
 #define BPP sizeof(int32_t)
 
@@ -32,7 +32,6 @@ typedef struct	fdf_pnt
 	uint32_t	color;
 }	fdf_pnt_t;
 
-// Exit the program as failure.
 static void	ft_error(void)
 {
 	perror(mlx_strerror(mlx_errno));
@@ -93,126 +92,173 @@ static void	fdf_keyhooks(mlx_key_data_t keydata, void *param)
 
 
 
-int main(void)
+int main(int argc, char *argv[])
 {
 
-	char *file = "test_maps/pyra.fdf";
-	int fd = open(file, O_RDONLY);
-
-	if (fd == -1)
+	if (argc != 2)
 	{
-		printf("CAN'T OPEN FILE!\n");
-		return (-1);
+		perror("Usage: ./fdf *.fdf");
+		exit(1);
 	}
-	// // char **map_arr;
-	// // map_arr = (char**) malloc(sizeof(char*));
-	char *get_line1 = get_next_line(fd);
-	if (!get_line1)
-		return (-2);
 
-	char **line1 = ft_split(get_line1, 32);
-	if (!line1)
-		return (-2);
-	free(get_line1);
+	char *file_prime = argv[1];
+	int fd_1 = open(file_prime, O_RDONLY);
 
-	char *get_line2 = get_next_line(fd);
-	if (!get_line2)
-		return (-2);
-	char **line2 = ft_split(get_line2, 32);
-	if (!line2)
-		return (-2);
-	free(get_line2);
-
-	char *get_line3 = get_next_line(fd);
-	if (!get_line3)
-		return (-2);
-	char **line3 = ft_split(get_line3, 32);
-	if (!line3)
-		return (-2);
-	free(get_line3);
-
-	int i = 0;
-
-	fdf_pnt_t **map = (fdf_pnt_t**) malloc(3 * sizeof(fdf_pnt_t*));
-	uint32_t color = 0xFF00FFFF;
-
-	while (line1[i])
+	if (fd_1 == -1)
 	{
-		printf("%s", line1[i]);
-		i++;
+		perror("Couldn't open file properly.");
+		exit(1);
 	}
-	printf("\n");
 
-	map[0] = malloc((i + 1) * sizeof(fdf_pnt_t));
+	
+	
+	// CHECK FILE_prime FORMAT (ALL ROWS HAVE SAME NUMBER OF ELEMENTS)
+	// COUNT LINES IN A FILE_prime	
+
+	char *file_second = argv[1];
+	int fd_2 = open(file_second, O_RDONLY);
+	
+	int lines_cnt;
+
+	lines_cnt = 0;
+	while (get_next_line(fd_2))
+		lines_cnt++;
+		
+	if (close(fd_2) < 0)
+	{
+		perror("Couldn't close the map file properly.");
+		exit(1);
+	}
+
+	
+	// GET LINE AND SPLIT
+	// POPULATE MAP ARRAY
+	
+	fdf_pnt_t **map = (fdf_pnt_t**) malloc(lines_cnt * sizeof(fdf_pnt_t*));
+	uint32_t color = 0x55AAFFFF;
+
+	int i;
+	int j;
+	int elem;
+	char *get_line = NULL;
+	char **line;
+	
 	i = 0;
-
-	while (line1[i])
+	get_line = get_next_line(fd_1);
+	if (!get_line)
 	{
-		map[0][i].x = i;
-		map[0][i].y = 0;
-		map[0][i].z = ft_atoi(line1[i]);
+		free(get_line);
+		get_line = NULL;
+	}
+	while (get_line)
+	{
+		line = ft_split(get_line, 32);
+		if (!line)
+		{
+			printf("BREAKS ON ft_split!\n");
+			return (-3);
+		}
 
-		uint8_t red = (color >> 24) & 0xFF;
-    	red = (red >> ft_atoi(line1[i])) | (red << (8 - ft_atoi(line1[i])));
-    	color = (color & 0xFF00FFFF) | (red << 16);
-		map[0][i].color = color;
+		free(get_line);
+		get_line = NULL;
+		
+		elem = 0;
+		while (line[elem])
+			elem++;
+		
+		map[i] = (fdf_pnt_t*) malloc((elem + 1) * sizeof(fdf_pnt_t));
+		
+		j = 0;
+		while (line[j])
+		{
+			// printf("i: %d | j: %d\n", j, i);
 
-		free(line1[i]);
-		line1[i] = NULL;
+			map[i][j].x = j;
+			map[i][j].y = i;
+			map[i][j].z = ft_atoi(line[j]);
+			
+			// SHIFT COLORS ACCORDING TO Z VALUE
+			// uint8_t red = (color >> 24) & 0xFF;
+			int shift_amount = map[i][j].z % 8; // Ensure shift_amount is between 0 and 7
+			// red = (red >> shift_amount) | (red << (8 - shift_amount));
+			// color = (color & 0x55AAFFFF) | (red << 24);
+			map[i][j].color = color >> abs(shift_amount/2);
+			
+
+			free(line[j]);
+			line[j] = NULL;
+			
+			j++;
+		}
+		free(line);
+		line = NULL;
+
+		get_line = get_next_line(fd_1);
+		if (!get_line)
+		{
+			free(get_line);
+			get_line = NULL;
+			break ;
+		}
+			
 		i++;
 	}
-
-	free(line1);
-	i = 0;
-	while (line2[i])
+	map[i] = NULL; // NULL FOR LAST ELEM OF MAP ARRAY
+	
+	// CLOSE FILE
+	
+	if (close(fd_1) < 0)
 	{
-
-		printf("%s", line2[i]);
-		free(line2[i]);
-		line2[i] = NULL;
-		i++;
+		perror("Couldn't close the map file properly.");
+		exit(1);
 	}
-	printf("\n");
+	
+	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", lines_cnt, elem);
 
-	free(line2);
-	i = 0;
-	while (line3[i])
-	{
-
-		printf("%s", line3[i]);
-		free(line3[i]);
-		line3[i] = NULL;
-		i++;
-	}
-	printf("\n");
-
-	free(line3);
-
-
-
-
-
-
-
+	// SETUP MLX INSATANCE AND DRAW WIREFRAME
 
 	mlx_t   *mlx;
-
-	// mlx_set_setting(MLX_MAXIMIZED, true);
+	
 	if (!(mlx = mlx_init(WIDTH, HEIGHT, "FDF", true)))
 		ft_error();
 
 	mlx_image_t *img = mlx_new_image(mlx, WIDTH, HEIGHT);
-	if (!img || (mlx_image_to_window(mlx, img, 0, 0) < 0))
+	if (!img || (mlx_image_to_window(mlx, img, 50, 50) < 0))
 		ft_error();
-
-	line_draw(img,  WIDTH/2, HEIGHT/2, map[0][0].x, map[0][0].y, map[0][0].color);
-	line_draw(img, WIDTH/2, HEIGHT/2, (WIDTH/2 + 200), HEIGHT/2  /  tan(M_PI/6), 0xFF0000FF); 	// X (RED)
-	line_draw(img, WIDTH/2, HEIGHT/2, WIDTH/2 - 200, WIDTH/2 /  tan(M_PI/6), 0x00FF00FF); 	// Y (GREEN)
-	line_draw(img, WIDTH/2, HEIGHT/2, WIDTH/2, (HEIGHT / 2 - 200), 0x0000FFFF); 			// Z (BLUE)
-
+	
+	int scale = 50;
+	
+	i = 0;
+	while (map[i] != NULL)
+	{
+		j = 0;
+		while (j < elem)
+		{
+			line_draw(img, scale * j, scale * i, scale * map[i][j+1].x, scale * map[i][j+1].y, map[i][j].color);
+			printf("%d %d %d %x\n", map[i][j].x, map[i][j].y, map[i][j].z, map[i][j].color);
+			j++;
+		}
+		i++;
+	}
 
 	mlx_key_hook(mlx, fdf_keyhooks, mlx);
 	mlx_loop(mlx);
 	mlx_terminate(mlx);
+	
+	i = 0;
+	while (map[i])
+	{
+		free(map[i]);
+		map[i] = NULL;
+		i++;
+	}
+	free(map);
+	map = NULL;
+	
 	return (EXIT_SUCCESS);
 }
+
+
+/// PROBLEMS AND SUGGESTIONS ///
+
+// -- MEMORY LEAKING BCOF GNL!
