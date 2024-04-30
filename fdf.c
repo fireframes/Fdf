@@ -6,10 +6,11 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/04/29 22:44:19 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/04/30 23:13:38 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <linux/input.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
@@ -21,17 +22,36 @@
 
 #define WIDTH 3500
 #define HEIGHT 1500
-#define SHIFT WIDTH/2
+// #define SHIFT WIDTH/2
 #define M_PI 3.14159265358979323846
-#define BPP sizeof(int32_t)
+// #define BPP sizeof(int32_t)
 
-typedef struct	fdf_pnt
+
+typedef struct	map_pnt
 {
-	int		x;
-	int		y;
-	int		z;
+	int			x;
+	int			y;
+	int			z;
 	uint32_t	color;
-}	fdf_pnt_t;
+}	map_pt_t;
+
+typedef struct ctrl_param
+{
+	int	scale;
+	int	transpose_x;
+	int	transpose_y;
+}	ctrl_param_t;
+
+typedef struct map_data
+{
+	mlx_t			*mlx;
+	mlx_image_t		*img;
+	map_pt_t		**map;
+	ctrl_param_t	*control;
+	int				elem;
+}	map_data_t;
+
+extern char	*get_next_line(int fd);
 
 static void	ft_error(void)
 {
@@ -39,12 +59,10 @@ static void	ft_error(void)
 	// strerror(mlx_errno);
 	exit(EXIT_FAILURE);
 }
-extern char	*get_next_line(int fd);
 
-
-void iso_point(int *x, int *y, int *z)
+static void	iso_point(int *x, int *y, int *z)
 {
-	double angle = M_PI / 4.0; // -45 degrees (counterclockwise)
+	double angle = M_PI / 4.0;
 	int x_tmp;
 
 	int shift_x = WIDTH/2;
@@ -55,6 +73,19 @@ void iso_point(int *x, int *y, int *z)
 	*x = x_tmp + shift_x;
 
 }
+static void	crop_outside(int *x, int *y, double dx_i, double dy_i)
+{
+
+	double a = dy_i / dx_i; // SLOPE
+	double b = *y - *x * a; // INTERCEPT
+	int yi = HEIGHT - 1;
+	int xi = (int) ((double)yi - b) / a;
+	if (*y > HEIGHT)
+	{
+		*x = xi;
+		*y = yi;
+	}
+}
 
 static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, int z1, uint32_t color)
 {
@@ -62,10 +93,6 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 	int sx = 0;
 	int sy = 0;
 	int e2 = 0;
-
-	// int out_border = 0;
-	// int x2,y2;
-	// double dx_r, dy_r;
 
 
 	// printf("ORIGINAL x0 | y0 | z0 : %d\t%d\t%d\n", x0, y0, z0);
@@ -75,30 +102,26 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 	iso_point(&x0, &y0, &z0);
 	iso_point(&x1, &y1, &z1);
 
+	// printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
+	// printf("POINT_1  x1 | y1 : %d\t%d\n", x1, y1);
 
+	double dx_i = x1 - x0;
+	double dy_i = y1 - y0;
+
+	if (y0 > HEIGHT)
+	{
+		printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
+		crop_outside(&x0, &y0, dx_i, dy_i);
+		printf("CROPPED  x0 | y0 : %d\t%d\n", x0, y0);  // MAYBE I NEED TO PASS THE (x0, y0) values as well
+
+	}
 	if (y1 > HEIGHT)
 	{
-		// out_border = 1;
-		printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
 		printf("POINT_1  x1 | y1 : %d\t%d\n", x1, y1);
+		crop_outside(&x1, &y1, dx_i, dy_i);
+		printf("CROPPED  x1 | y1 : %d\t%d\n", x1, y1);
 
-		double dx_i = x1 - x0;
-		double dy_i = y1 - y0;
-
-		double a = dy_i / dx_i; // SLOPE
-		double b = y0 - a * x0; // INTERCEPT
-
-		int yi = HEIGHT - 1;
-		int xi = (int) ((double)yi - b) / a;
-
-		x1 = xi;
-		y1 = yi;
-		printf("POINT_i  xi | yi : %d\t%d\n", xi, yi);
 	}
-
-	// printf("ROTATED  x0 | y0 | z0 : %d\t%d\t%d\n", x0, y0, z0);
-	// printf("ROTATED  x1 | y1 | z1 : %d\t%d\t%d\n", x1, y1, z1);
-
 
 	// BRESENHAM'S LINE DRAWING ALGORITHM
 
@@ -136,17 +159,79 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 		}
 	}
 }
-// KEYHOOK FOR 'ESC' KEY TO CLOSE GRAPH WINDOW
-static void	fdf_keyhooks(mlx_key_data_t keydata, void *param)
-{
-	mlx_t *mlx;
 
-	mlx = (mlx_t*) param;
+static void	all_keyhooks(mlx_key_data_t keydata, void *param)
+{
+	map_data_t	*data;
+
+	data = (map_data_t*) param;
+
+	printf("scale -- %d\n", data->control->scale);
+
+	if (keydata.key == MLX_KEY_UP && keydata.action == MLX_PRESS)
+		data->control->scale += 10;
+	if (keydata.key == MLX_KEY_DOWN && keydata.action == MLX_PRESS)
+		data->control->scale -= 10;
 	if (keydata.key == MLX_KEY_ESCAPE && keydata.action == MLX_PRESS)
-		mlx_close_window(mlx);
+		mlx_close_window(data->mlx);
 }
 
+static int	render_map(map_data_t *data)
+{
+	int	i;
+	int	j;
 
+
+	//RENDER BG
+
+	i = 0;
+	while (i < HEIGHT)
+	{
+		j = 0;
+		while (j < WIDTH)
+		{
+			mlx_put_pixel(data->img, j, i, 0x222222FF);
+			j++;
+		}
+		i++;
+	}
+
+	i = 0;
+	while (data->map[i] != NULL)
+	{
+		j = 0;
+		while (j < data->elem - 1) // INSTEAD OF SUBTRACTING ONE POSITION MAYBE IT WOULD BE BETTER TO CLEAN THE TRAILING NULS WITH FT_STRTRIM?
+		{
+			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y,
+					data->map[i][j].z, data->control->scale * data->map[i][j+1].x, data->control->scale * data->map[i][j+1].y, data->map[i][j+1].z, data->map[i][j].color);
+
+			j++;
+		}
+		i++;
+	}
+	j = 0;
+	while (j < data->elem)
+	{
+		i = 0;
+		while (data->map[i + 1] != NULL)
+		{
+			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y, data->map[i][j].z,
+					data->control->scale * data->map[i + 1][j].x, data->control->scale * data->map[i+1][j].y, data->map[i+1][j].z, data->map[i][j].color);
+
+			i++;
+		}
+		j++;
+	}
+	return (0);
+}
+
+void render_map_wrapper(void *param)
+{
+	map_data_t *data = (map_data_t*) param;
+
+	render_map((map_data_t*) data);
+	mlx_key_hook(data->mlx, all_keyhooks, data);
+}
 
 int main(int argc, char *argv[])
 {
@@ -190,12 +275,14 @@ int main(int argc, char *argv[])
 	// GET LINE AND SPLIT
 	// POPULATE MAP ARRAY
 
-	fdf_pnt_t **map = (fdf_pnt_t**) malloc(lines_cnt * sizeof(fdf_pnt_t*));
+	map_data_t data;
+
+
+	data.map = (map_pt_t**) malloc(lines_cnt * sizeof(map_pt_t*));
 	uint32_t color = 0x55AAFFFF;
 
 	int i;
 	int j;
-	int elem;
 	char *get_line = NULL;
 	char **line;
 
@@ -218,27 +305,27 @@ int main(int argc, char *argv[])
 		free(get_line);
 		get_line = NULL;
 
-		elem = 0;
-		while (line[elem])
-			elem++;
+		data.elem = 0;				// SEPARATE FUNCTION COUNT ELEM
+		while (line[data.elem])
+			data.elem++;
 
-		map[i] = (fdf_pnt_t*) malloc((elem + 1) * sizeof(fdf_pnt_t));
+		data.map[i] = (map_pt_t*) malloc((data.elem + 1) * sizeof(map_pt_t));
 
 		j = 0;
 		while (line[j])
 		{
 			// printf("i: %d | j: %d\n", j, i);
 
-			map[i][j].x = j;
-			map[i][j].y = i;
-			map[i][j].z = ft_atoi(line[j]) * 3;
+			data.map[i][j].x = j;
+			data.map[i][j].y = i;
+			data.map[i][j].z = ft_atoi(line[j]) * 3;
 
 			// SHIFT COLORS ACCORDING TO Z VALUE
 			// uint8_t red = (color >> 24) & 0xFF;
-			int shift_amount = map[i][j].z % 8; // Ensure shift_amount is between 0 and 7
+			int shift_amount = data.map[i][j].z % 8; // Ensure shift_amount is between 0 and 7
 			// red = (red >> shift_amount) | (red << (8 - shift_amount));
 			// color = (color & 0x55AAFFFF) | (red << 24);
-			map[i][j].color = color >> abs(shift_amount/2);
+			data.map[i][j].color = color >> abs(shift_amount/2);
 
 
 			free(line[j]);
@@ -259,7 +346,7 @@ int main(int argc, char *argv[])
 
 		i++;
 	}
-	map[i] = NULL; // NULL FOR LAST ELEM OF MAP ARRAY
+	data.map[i] = NULL; // NULL FOR LAST ELEM OF MAP ARRAY
 
 	// CLOSE FILE
 
@@ -269,61 +356,38 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", lines_cnt, elem);
+	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", lines_cnt, data.elem);
 
 	// SETUP MLX INSATANCE AND DRAW WIREFRAME
 
-	mlx_t   *mlx;
 
-	if (!(mlx = mlx_init(WIDTH, HEIGHT, "FDF", true)))
+	if (!(data.mlx = mlx_init(WIDTH, HEIGHT, "FDF", true)))
 		ft_error();
 
-	mlx_image_t *img = mlx_new_image(mlx, WIDTH, HEIGHT);
-	if (!img || (mlx_image_to_window(mlx, img, 0, 0) < 0))
+	data.img = mlx_new_image(data.mlx, WIDTH, HEIGHT);
+	if (!data.img || (mlx_image_to_window(data.mlx, data.img, 0, 0) < 0))
 		ft_error();
 
-	int scale = 40;
+
+	// CONTROLLING PARAMS (SCALE / TRANSPOSE / ROTATE)
+
+	data.control = (ctrl_param_t *) malloc(sizeof(ctrl_param_t));
+	data.control->scale = 30;
+
+
+	mlx_loop_hook(data.mlx, render_map_wrapper, &data);
+	mlx_loop(data.mlx);
+	mlx_terminate(data.mlx);
 
 	i = 0;
-
-
-	while (map[i] != NULL)
+	while (data.map[i])
 	{
-		j = 0;
-		while (j < elem - 1) // INSTEAD OF SUBTRACTING ONE POSITION MAYBE IT WOULD BE BETTER TO CLEAN THE TRAILING NULS WITH FT_STRTRIM?
-		{
-			line_draw(img, scale * map[i][j].x, scale * map[i][j].y, map[i][j].z, scale * map[i][j+1].x, scale * map[i][j+1].y, map[i][j+1].z, map[i][j].color);
-
-			j++;
-		}
+		free(data.map[i]);
+		data.map[i] = NULL;
 		i++;
 	}
-	j = 0;
-	while (j < elem)
-	{
-		i = 0;
-		while (map[i + 1] != NULL)
-		{
-			line_draw(img, scale * map[i][j].x, scale * map[i][j].y, map[i][j].z, scale * map[i + 1][j].x, scale * map[i+1][j].y, map[i+1][j].z, map[i][j].color);
-
-			i++;
-		}
-		j++;
-	}
-
-	mlx_key_hook(mlx, fdf_keyhooks, mlx);
-	mlx_loop(mlx);
-	mlx_terminate(mlx);
-
-	i = 0;
-	while (map[i])
-	{
-		free(map[i]);
-		map[i] = NULL;
-		i++;
-	}
-	free(map);
-	map = NULL;
+	free(data.map);
+	data.map = NULL;
 
 	return (EXIT_SUCCESS);
 }
