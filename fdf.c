@@ -6,11 +6,10 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/04/30 23:13:38 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/02 22:37:33 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <linux/input.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
@@ -20,12 +19,9 @@
 #include "libft.h"
 #include "MLX42/include/MLX42/MLX42.h"
 
-#define WIDTH 3500
-#define HEIGHT 1500
-// #define SHIFT WIDTH/2
+#define WIDTH 1600
+#define HEIGHT 900
 #define M_PI 3.14159265358979323846
-// #define BPP sizeof(int32_t)
-
 
 typedef struct	map_pnt
 {
@@ -37,9 +33,10 @@ typedef struct	map_pnt
 
 typedef struct ctrl_param
 {
-	int	scale;
-	int	transpose_x;
-	int	transpose_y;
+	int		scale;
+	int		transpose_x;
+	int		transpose_y;
+	float	rotate;
 }	ctrl_param_t;
 
 typedef struct map_data
@@ -60,66 +57,119 @@ static void	ft_error(void)
 	exit(EXIT_FAILURE);
 }
 
-static void	iso_point(int *x, int *y, int *z)
+static void	iso_point(int *x, int *y, int *z, ctrl_param_t *control)
 {
-	double angle = M_PI / 4.0;
+	double angle = M_PI / 4.0 * control->rotate;
 	int x_tmp;
 
-	int shift_x = WIDTH/2;
-	int shift_y = HEIGHT/2;
+	int shift_x = WIDTH/2 + control->transpose_x;
+	int shift_y = HEIGHT/4 + control->transpose_y;
 
 	x_tmp = (int) round((*x - *y) * cos(angle));
 	*y = (int) round((*x + *y) * sin(angle) - *z) + shift_y;
 	*x = x_tmp + shift_x;
 
 }
+/*
 static void	crop_outside(int *x, int *y, double dx_i, double dy_i)
 {
 
 	double a = dy_i / dx_i; // SLOPE
 	double b = *y - *x * a; // INTERCEPT
-	int yi = HEIGHT - 1;
-	int xi = (int) ((double)yi - b) / a;
+	
+	// printf("a:	%lf\t", a);
+	// printf("b:	%lf\n", b);
+	
+	unsigned int yi = 0;
+	unsigned int xi = 0;
+	
+	// printf("before x:	%d\t", *x);
+	// printf("before y:	%d\n", *y);
+	
 	if (*y > HEIGHT)
 	{
-		*x = xi;
-		*y = yi;
+		yi = HEIGHT - 1;
+		xi = (unsigned int) round((yi - b) / a);
 	}
+	else if (*y < 0)
+		xi = (unsigned int) round((yi - b) / a);
+	
+	if (*x > WIDTH)
+	{
+		xi = WIDTH - 1;
+		yi = (unsigned int) round(a * xi + b);
+	}
+	else if (*x < 0)
+		yi = (unsigned int) round(a * xi + b);
+	
+	*x = xi;
+	*y = yi;
+	
+}
+*/
+static void crop_outside(int *_x, int *_y, double dx_i, double dy_i)
+{
+    double a = dy_i / dx_i; // SLOPE
+    double b = *_y - *_x * a; // INTERCEPT
+
+    unsigned int xi = *_x;
+    unsigned int yi = *_y;
+
+    // Clamp x and y values within the valid range
+    if (*_x < 0)
+        xi = 0;
+    else if (*_x > WIDTH)
+        xi = WIDTH - 1;
+
+    if (*_y < 0)
+        yi = 0;
+    else if (*_y > HEIGHT)
+        yi = HEIGHT - 1;
+
+    // Calculate new coordinates if outside the valid range
+    if (xi == 0 || xi == WIDTH - 1)
+        yi = (unsigned int)round(a * xi + b);
+    else if (yi == 0 || yi == HEIGHT - 1)
+        xi = (unsigned int)round((yi - b) / a);
+
+    *_x = xi;
+    *_y = yi;
 }
 
-static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, int z1, uint32_t color)
+static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, int z1, uint32_t color, ctrl_param_t *control)
 {
-	int dx, dy;
-	int sx = 0;
-	int sy = 0;
-	int e2 = 0;
+	double dx, dy;
+	double sx = 0;
+	double sy = 0;
+	double e2 = 0;
 
-
-	// printf("ORIGINAL x0 | y0 | z0 : %d\t%d\t%d\n", x0, y0, z0);
-	// printf("ORIGINAL x1 | y1 | z1 : %d\t%d\t%d\n", x1, y1, z1);
-
-
-	iso_point(&x0, &y0, &z0);
-	iso_point(&x1, &y1, &z1);
+	iso_point(&x0, &y0, &z0, control);
+	iso_point(&x1, &y1, &z1, control);
 
 	// printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
 	// printf("POINT_1  x1 | y1 : %d\t%d\n", x1, y1);
 
-	double dx_i = x1 - x0;
-	double dy_i = y1 - y0;
+	double dx_i;
+	double dy_i;
 
-	if (y0 > HEIGHT)
+	dx_i = x1 - x0;
+	dy_i = y1 - y0;
+
+	dx = abs(x1 - x0);
+	dy = -abs(y1 - y0);
+
+	if (y0 > HEIGHT || y0 < 0)
 	{
-		printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
+		// printf("POINT_0  x0 | y0 : %d\t%d\n", x0, y0);
 		crop_outside(&x0, &y0, dx_i, dy_i);
-		printf("CROPPED  x0 | y0 : %d\t%d\n", x0, y0);  // MAYBE I NEED TO PASS THE (x0, y0) values as well
+		// printf("CROPPED  x0 | y0 : %d\t%d\n", x0, y0);  // MAYBE I NEED TO PASS THE (x0, y0) values as well
 
 	}
-	if (y1 > HEIGHT)
+	if (y1 > HEIGHT || y1 < 0)
 	{
-		printf("POINT_1  x1 | y1 : %d\t%d\n", x1, y1);
+		// printf("POINT_1  x1 | y1 : %d\t%d\n", x1, y1);
 		crop_outside(&x1, &y1, dx_i, dy_i);
-		printf("CROPPED  x1 | y1 : %d\t%d\n", x1, y1);
+		// printf("CROPPED  x1 | y1 : %d\t%d\n", x1, y1);
 
 	}
 
@@ -127,13 +177,12 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 
 	// ~ NEED TO ADD FILTER TO CUT OFFMAP VALUES! ~
 
-	dx = abs(x1 - x0);
-	dy = -abs(y1 - y0);
+
 
 	sx = x0 < x1 ? 1 : -1;
 	sy = y0 < y1 ? 1 : -1;
 
-  	int error = dx + dy;
+  	double error = dx + dy;
 
 	while (1)
 	{
@@ -165,14 +214,25 @@ static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 	map_data_t	*data;
 
 	data = (map_data_t*) param;
-
-	printf("scale -- %d\n", data->control->scale);
-
-	if (keydata.key == MLX_KEY_UP && keydata.action == MLX_PRESS)
-		data->control->scale += 10;
-	if (keydata.key == MLX_KEY_DOWN && keydata.action == MLX_PRESS)
-		data->control->scale -= 10;
-	if (keydata.key == MLX_KEY_ESCAPE && keydata.action == MLX_PRESS)
+	if (keydata.key == MLX_KEY_RIGHT_BRACKET && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->scale += 1;
+	if (keydata.key == MLX_KEY_LEFT_BRACKET && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->scale -= 1;
+	if (keydata.key == MLX_KEY_RIGHT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->transpose_x += 10;
+	if (keydata.key == MLX_KEY_LEFT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->transpose_x -= 10;
+	if (keydata.key == MLX_KEY_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->transpose_y -= 10;
+	if (keydata.key == MLX_KEY_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->transpose_y += 10;
+		
+	if (keydata.key == MLX_KEY_PAGE_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->rotate -= 0.1;
+	if (keydata.key == MLX_KEY_PAGE_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->rotate += 0.1;
+	
+	if (keydata.key == MLX_KEY_ESCAPE && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
 		mlx_close_window(data->mlx);
 }
 
@@ -180,22 +240,18 @@ static int	render_map(map_data_t *data)
 {
 	int	i;
 	int	j;
-
-
-	//RENDER BG
-
+	
 	i = 0;
 	while (i < HEIGHT)
 	{
 		j = 0;
 		while (j < WIDTH)
 		{
-			mlx_put_pixel(data->img, j, i, 0x222222FF);
+			mlx_put_pixel(data->img, j, i, 0x222222FF); 
 			j++;
 		}
 		i++;
 	}
-
 	i = 0;
 	while (data->map[i] != NULL)
 	{
@@ -203,7 +259,8 @@ static int	render_map(map_data_t *data)
 		while (j < data->elem - 1) // INSTEAD OF SUBTRACTING ONE POSITION MAYBE IT WOULD BE BETTER TO CLEAN THE TRAILING NULS WITH FT_STRTRIM?
 		{
 			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y,
-					data->map[i][j].z, data->control->scale * data->map[i][j+1].x, data->control->scale * data->map[i][j+1].y, data->map[i][j+1].z, data->map[i][j].color);
+					data->map[i][j].z, data->control->scale * data->map[i][j+1].x, data->control->scale * data->map[i][j+1].y, 
+					data->map[i][j+1].z, data->map[i][j].color, data->control);
 
 			j++;
 		}
@@ -215,8 +272,9 @@ static int	render_map(map_data_t *data)
 		i = 0;
 		while (data->map[i + 1] != NULL)
 		{
-			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y, data->map[i][j].z,
-					data->control->scale * data->map[i + 1][j].x, data->control->scale * data->map[i+1][j].y, data->map[i+1][j].z, data->map[i][j].color);
+			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y, 
+					data->map[i][j].z, data->control->scale * data->map[i + 1][j].x, data->control->scale * data->map[i+1][j].y, 
+					data->map[i+1][j].z, data->map[i][j].color, data->control);
 
 			i++;
 		}
@@ -277,8 +335,8 @@ int main(int argc, char *argv[])
 
 	map_data_t data;
 
-
-	data.map = (map_pt_t**) malloc(lines_cnt * sizeof(map_pt_t*));
+	
+	data.map = (map_pt_t**) malloc((lines_cnt + 1) * sizeof(map_pt_t*));
 	uint32_t color = 0x55AAFFFF;
 
 	int i;
@@ -297,11 +355,7 @@ int main(int argc, char *argv[])
 	{
 		line = ft_split(get_line, 32);
 		if (!line)
-		{
-			printf("BREAKS ON ft_split!\n");
 			return (-3);
-		}
-
 		free(get_line);
 		get_line = NULL;
 
@@ -314,13 +368,12 @@ int main(int argc, char *argv[])
 		j = 0;
 		while (line[j])
 		{
-			// printf("i: %d | j: %d\n", j, i);
-
 			data.map[i][j].x = j;
 			data.map[i][j].y = i;
 			data.map[i][j].z = ft_atoi(line[j]) * 3;
 
 			// SHIFT COLORS ACCORDING TO Z VALUE
+			
 			// uint8_t red = (color >> 24) & 0xFF;
 			int shift_amount = data.map[i][j].z % 8; // Ensure shift_amount is between 0 and 7
 			// red = (red >> shift_amount) | (red << (8 - shift_amount));
@@ -372,8 +425,12 @@ int main(int argc, char *argv[])
 	// CONTROLLING PARAMS (SCALE / TRANSPOSE / ROTATE)
 
 	data.control = (ctrl_param_t *) malloc(sizeof(ctrl_param_t));
-	data.control->scale = 30;
-
+	data.control->scale = (int)(((sqrt(WIDTH / data.elem) + sqrt(HEIGHT / lines_cnt))) / (WIDTH / HEIGHT * 1.0));
+	printf("CALCULATED SCALE: %d\n", data.control->scale);
+	
+	data.control->transpose_x = 0;
+	data.control->transpose_y = 0;
+	data.control->rotate = 1.0;
 
 	mlx_loop_hook(data.mlx, render_map_wrapper, &data);
 	mlx_loop(data.mlx);
@@ -388,11 +445,18 @@ int main(int argc, char *argv[])
 	}
 	free(data.map);
 	data.map = NULL;
+	free(data.control);
+	data.control = NULL;
 
 	return (EXIT_SUCCESS);
 }
 
 
-/// PROBLEMS AND SUGGESTIONS ///
+// TODO:
 
-// -- MEMORY LEAKING BCOF GNL!
+// - NORM CODE !
+// - COLOR GRADIENT !!
+// - CRASHES AND LEAKS !!!
+// -- REBEL POINTS
+// --- SMOOTHER LINES
+// ---- CENTRALED ANCHOR POINT
