@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/04 20:25:52 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/07 00:52:25 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,8 @@
 #include "libft.h"
 #include "MLX42/include/MLX42/MLX42.h"
 
-#define WIDTH 3200
-#define HEIGHT 1800
+#define WIDTH 1600
+#define HEIGHT 900
 #define M_PI 3.14159265358979323846
 
 typedef struct	map_pnt
@@ -37,6 +37,7 @@ typedef struct ctrl_param
 	int		transpose_x;
 	int		transpose_y;
 	float	rotate;
+	float	stretch;
 }	ctrl_param_t;
 
 typedef struct map_data
@@ -68,23 +69,23 @@ static void	iso_point(int *x, int *y, int *z, ctrl_param_t *control)
  	shift_y = HEIGHT / 4 + control->transpose_y;
 	angle = M_PI / 4 * control->rotate;
 	x_tmp = (int) round((*x - *y) * cos(angle));
-	*y = (int) round((*x + *y) * sin(angle) - *z) + shift_y;
+	*y = (int) round((*x + *y) * sin(angle) - (*z * control->stretch)) + shift_y;
 	*x = x_tmp + shift_x;
 }
-uint32_t shift_color(uint32_t color, int z0, int z1)
+uint32_t shift_color(uint32_t color, int z0)
 {
 
 	uint32_t r_mask = 0x00FFFFFF;
 	uint32_t g_mask = 0xFF00FFFF;
 	uint32_t b_mask = 0xFFFF00FF;
-	int dz = abs(z1 - z0);
+	// int dz = abs(z1 - z0);
 	int red = color >> 24;
 	int green = color >> 16 & 0xFF;
 	int blue = color >> 8 & 0xFF;
 
-	red = red - (dz % 8);// * 0.2;
-	green = green - (dz % 8);// * 0.4;
-	blue = blue - (dz % 8);// * 0.6;
+	red = red + (z0 / 2) % 8;
+	green = green + (z0 / 2) % 8;
+	blue = blue + (z0 / 2) % 8;
 
 	// printf("red: %x\n", red);
 	// printf("green: %x\n", green);
@@ -107,26 +108,23 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 	double	sy;
 	double	error;
 	double	e2;
-
+	
 	iso_point(&x0, &y0, &z0, control);
 	iso_point(&x1, &y1, &z1, control);
+	
+
+	// CARPET SETUP	
+	color = color * (z1 - z0) / 0.01;	
+	color = shift_color(color, (z1 - z0));
 
 	// ANDREW'S METHOD - JUST RETURNING WHAT IS OUT OF BOUNDS
-	if (y1 >= HEIGHT)
+	if (x0 >= WIDTH || x1 >= WIDTH)
 		return ;
-	if (y0 >= HEIGHT)
+	else if (y0 >= HEIGHT || y1 >= HEIGHT)
 		return ;
-	if (x0 < 0)
+	else if (x0 < 0 || x1 < 0)
 		return ;
-	else if (y0 < 0)
-		return ;
-	else if (x1 < 0)
-		return ;
-	else if (y1 < 0)
-		return ;
-	else if (x0 >= WIDTH)
-		return ;
-	else if (x1 >= WIDTH)
+	else if (y0 < 0 || y1 < 0)
 		return ;
 
 	// BRESENHAM'S LINE DRAWING ALGORITHM
@@ -144,7 +142,7 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 
 while (1)
 	{
-		mlx_put_pixel(img, x0, y0, shift_color(color, z0, z1));
+		mlx_put_pixel(img, x0, y0, color);
 		if (x0 == x1 && y0 == y1)
 			break ;
 		e2 = 2 * error;
@@ -186,6 +184,10 @@ static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 		data->control->rotate -= 0.1;
 	if (keydata.key == MLX_KEY_PAGE_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
 		data->control->rotate += 0.1;
+	if (keydata.key == MLX_KEY_EQUAL && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->stretch += 0.5;
+	if (keydata.key == MLX_KEY_MINUS && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+		data->control->stretch -= 0.5;
 	if (keydata.key == MLX_KEY_ESCAPE && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
 		mlx_close_window(data->mlx);
 }
@@ -321,7 +323,7 @@ int main(int argc, char *argv[])
 		{
 			data.map[i][j].x = j;
 			data.map[i][j].y = i;
-			data.map[i][j].z = ft_atoi(line[j]) * 8;
+			data.map[i][j].z = ft_atoi(line[j]);
 			data.map[i][j].color = color;
 
 			free(line[j]);
@@ -365,6 +367,7 @@ int main(int argc, char *argv[])
 	data.control->transpose_x = 0;
 	data.control->transpose_y = 0;
 	data.control->rotate = 1.0;
+	data.control->stretch = 8.0;
 
 	mlx_loop_hook(data.mlx, render_map_wrapper, &data);
 	mlx_loop(data.mlx);
@@ -388,17 +391,17 @@ int main(int argc, char *argv[])
 
 // TODO:
 
-// - KEYHOOK FOR STRETCHING MODEL
+// - MAKE TOP VIEW
 // - NORM CODE !
 // - COLOR PARSING AND GRADIENT !!
 // - MAKEFILE !!
 // - UNDERSTAND YOUR ALGORITHMS))
-// - SOME STRANGE POINTS AND LINES IN DIFF FILES
-	// because of spaces in the end of lines --> need to parse or trim correctly
 
+
+// + SOME STRANGE POINTS AND LINES IN DIFF FILES
+	// because of spaces in the end of lines
 // + CRASHES AND LEAKS !!!
 	// DONE!
-
 // +- REBEL POINTS
 	// fixed by just skipping outborder point recalculating
 	// (maybe come up with original cropping solurion later)
