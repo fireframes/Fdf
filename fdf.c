@@ -6,55 +6,17 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/07 19:18:36 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/08 01:31:44 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <fcntl.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "libft.h"
-#include "MLX42/include/MLX42/MLX42.h"
-
-#define WIDTH 3200
-#define HEIGHT 1800
-#define M_PI 3.14159265358979323846
-
-typedef struct	map_pnt
-{
-	int			x;
-	int			y;
-	int			z;
-	uint32_t	color;
-}	map_pt_t;
-
-typedef struct ctrl_param
-{
-	int		scale;
-	int		transpose_x;
-	int		transpose_y;
-	float	rotate;
-	float	stretch;
-}	ctrl_param_t;
-
-typedef struct map_data
-{
-	mlx_t			*mlx;
-	mlx_image_t		*img;
-	map_pt_t		**map;
-	ctrl_param_t	*control;
-	int				elem;
-}	map_data_t;
+#include "fdf.h"
 
 extern char	*get_next_line(int fd);
 
-static void	ft_error(void)
+static void	ft_mlxerror(void)
 {
 	perror(mlx_strerror(mlx_errno));
-	// strerror(mlx_errno);
 	exit(EXIT_FAILURE);
 }
 
@@ -66,7 +28,7 @@ static void	iso_point(int *x, int *y, int *z, ctrl_param_t *control)
 	int		shift_y;
 
 	shift_x = WIDTH / 2 + control->transpose_x;
- 	shift_y = HEIGHT / 4 + control->transpose_y;
+	shift_y = HEIGHT / 4 + control->transpose_y;
 	angle = M_PI / 4 * control->rotate;
 	x_tmp = (int) round((*x - *y) * cos(angle));
 	*y = (int) round((*x + *y) * sin(angle) - (*z * control->stretch)) + shift_y;
@@ -86,17 +48,9 @@ uint32_t shift_color(uint32_t color, int z0)
 	red = red + (z0 / 2) % 8;
 	green = green + (z0 / 2) % 8;
 	blue = blue + (z0 / 2) % 8;
-
-	// printf("red: %x\n", red);
-	// printf("green: %x\n", green);
-	// printf("blue: %x\n", blue);
-	// printf("in color: %x\n", color);
-
 	color = (color & r_mask) | (red << 24);
 	color = (color & g_mask) | (green << 16);
 	color = (color & b_mask) | (blue << 8);
-
-	// printf("out color: %x\n", color);
 	return (color);
 }
 
@@ -114,8 +68,8 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 
 
 	// CARPET SETUP
-	color = color * (z1 - z0) / 0.01;
-	color = shift_color(color, (z1 - z0));
+	// color = color * (z1 - z0) / 0.01;
+	// color = shift_color(color, (z1 - z0));
 
 	// ANDREW'S METHOD - JUST RETURNING WHAT IS OUT OF BOUNDS
 	if (x0 >= WIDTH || x1 >= WIDTH)
@@ -168,31 +122,31 @@ static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 	map_data_t	*data;
 
 	data = (map_data_t*) param;
-	if (keydata.key == MLX_KEY_RIGHT_BRACKET && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_RIGHT_BRACKET && IS_KEY_PRESSED(keydata))
 		data->control->scale += 1;
-	if (keydata.key == MLX_KEY_LEFT_BRACKET && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_LEFT_BRACKET && IS_KEY_PRESSED(keydata))
 		data->control->scale -= 1;
-	if (keydata.key == MLX_KEY_RIGHT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_RIGHT && IS_KEY_PRESSED(keydata))
 		data->control->transpose_x += 20;
-	if (keydata.key == MLX_KEY_LEFT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_LEFT && IS_KEY_PRESSED(keydata))
 		data->control->transpose_x -= 20;
-	if (keydata.key == MLX_KEY_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_UP && IS_KEY_PRESSED(keydata))
 		data->control->transpose_y -= 20;
-	if (keydata.key == MLX_KEY_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_DOWN && IS_KEY_PRESSED(keydata))
 		data->control->transpose_y += 20;
-	if (keydata.key == MLX_KEY_PAGE_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_PAGE_UP && IS_KEY_PRESSED(keydata))
 		data->control->rotate -= 0.1;
-	if (keydata.key == MLX_KEY_PAGE_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_PAGE_DOWN && IS_KEY_PRESSED(keydata))
 		data->control->rotate += 0.1;
-	if (keydata.key == MLX_KEY_EQUAL && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_EQUAL && IS_KEY_PRESSED(keydata))
 		data->control->stretch += 0.5;
-	if (keydata.key == MLX_KEY_MINUS && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_MINUS && IS_KEY_PRESSED(keydata))
 		data->control->stretch -= 0.5;
-	if (keydata.key == MLX_KEY_ESCAPE && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
+	if (keydata.key == MLX_KEY_ESCAPE && IS_KEY_PRESSED(keydata))
 		mlx_close_window(data->mlx);
 }
 
-static int	render_map(map_data_t *data)
+static void	render_bg(map_data_t *data)
 {
 	int	i;
 	int	j;
@@ -208,6 +162,13 @@ static int	render_map(map_data_t *data)
 		}
 		i++;
 	}
+}
+
+static int	render_map(map_data_t *data)
+{
+	int	i;
+	int	j;
+
 	i = 0;
 	while (data->map[i] != NULL)
 	{
@@ -242,6 +203,7 @@ void render_map_wrapper(void *param)
 	map_data_t	*data;
 
 	data = (map_data_t*) param;
+	render_bg((map_data_t*) data);
 	render_map((map_data_t*) data);
 	mlx_key_hook(data->mlx, all_keyhooks, data);
 }
@@ -258,57 +220,71 @@ int ft_strendswith(const char *str, const char *end)
 	return (0);
 }
 
-int open_file_cnt_lines(int argc, char *argv[])
+int count_lines(char *filepath)
 {
-	if (argc != 2)
-	{
-		perror("Program takes one file of type '.fdf' as argument: ./fdf *.fdf");
-		return (-1);
-	}
-	if (ft_strendswith(argv[1], ".fdf") == 0)
-	{
-		ft_putstr_fd("File must be of type '.fdf'\n", 1);
-		return (-2);
-	}
+	char	*file;
+	char	*line;
+	int		fd;
+	int		line_cnt;
 
-	char *file_prime = argv[1];
-	int fd_1 = open(file_prime, O_RDONLY);
-
-	if (fd_1 == -1)
-	{
-		perror("Couldn't open file properly");
-		return (-3);
-	}
-
-	char *file_second = argv[1];
-	char *tmp_getline;
-	int fd_2 = open(file_second, O_RDONLY);
-
-	int line_cnt;
-
+	file = filepath;
+	fd = open(file, O_RDONLY);
 	line_cnt = 0;
-	while ((tmp_getline = get_next_line(fd_2)))
+	while ((line = get_next_line(fd)))
 	{
 		line_cnt++;
-		free(tmp_getline);
+		free(line);
 	}
 	if (line_cnt == 0)
 	{
-		perror("Empty file");
-		return (-4);
+		ft_putstr_fd("error: Empty file\n", 1);
+		exit(1);
 	}
-	if (close(fd_2) < 0)
+	if (close(fd) < 0)
 	{
-		perror("Couldn't close the file properly");
-		return (-5);
+		ft_putstr_fd("error: Could not close the file properly\n", 1);
+		exit(1);
 	}
 	return (line_cnt);
 }
 
+int open_file(int argc, char *filepath)
+{
+	char	*file;
+	int		fd;
+	
+	if (argc != 2)
+	{
+		errno = EINVAL;
+		perror("error: Program takes a path to file of type '.fdf' as argument");
+		exit(1);
+	}
+	if (ft_strendswith(filepath, ".fdf") == 0)
+	{
+		ft_putstr_fd("error: File must be of type '.fdf'\n", 1);
+		exit(1);
+	}
+	file = filepath;
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
+	{
+		errno = EBADF;
+		perror("error: Could not open file");
+		exit(1);
+	}
+	return (fd);
+}
+
 int main(int argc, char *argv[])
 {
-	map_data_t data;
+	int	fd;
+	int	line_cnt;
 
+	fd = open_file(argc, argv[1]);
+	line_cnt = count_lines(argv[1]);
+	
+	map_data_t data;
+	
 	data.map = (map_pt_t**) malloc((line_cnt + 1) * sizeof(map_pt_t*));
 	uint32_t color = 0x55AAFFFF;
 
@@ -318,15 +294,15 @@ int main(int argc, char *argv[])
 	char **line;
 
 	i = 0;
-	while ((getline = get_next_line(fd_1)))
+	while ((getline = get_next_line(fd)))
 	{
 		line = ft_split(getline, 32);
 		if (!line)
 			return (-3);
-		free(getline);
+		free(getline); // cleanup
 		getline = NULL;
 
-		data.elem = 0;				// SEPARATE FUNCTION COUNT ELEM
+		data.elem = 0;
 		while (line[data.elem])
 			data.elem++;
 
@@ -343,12 +319,12 @@ int main(int argc, char *argv[])
 			data.map[i][j].z = ft_atoi(line[j]);
 			data.map[i][j].color = color;
 
-			free(line[j]);
+			free(line[j]); // cleanup
 			line[j] = NULL;
 
 			j++;
 		}
-		free(line);
+		free(line); // cleanup
 		line = NULL;
 		i++;
 	}
@@ -356,30 +332,29 @@ int main(int argc, char *argv[])
 
 	// CLOSE FILE
 
-	if (close(fd_1) < 0)
+	if (close(fd) < 0)
 	{
 		perror("Couldn't close the map file properly.");
 		exit(1);
 	}
 
-	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", line_cnt, data.elem);
+
 
 	// SETUP MLX INSATANCE AND DRAW WIREFRAME
 
 
 	if (!(data.mlx = mlx_init(WIDTH, HEIGHT, "FDF", true)))
-		ft_error();
+		ft_mlxerror();
 
 	data.img = mlx_new_image(data.mlx, WIDTH, HEIGHT);
 	if (!data.img || (mlx_image_to_window(data.mlx, data.img, 0, 0) < 0))
-		ft_error();
+		ft_mlxerror();
 
 
 	// CONTROLLING PARAMS (SCALE / TRANSPOSE / ROTATE)
 
 	data.control = (ctrl_param_t *) malloc(sizeof(ctrl_param_t));
 	data.control->scale = (int)(((sqrt(WIDTH / data.elem) + sqrt(HEIGHT / line_cnt))) / (WIDTH / HEIGHT * 1.0));
-	printf("CALCULATED SCALE: %d\n", data.control->scale);
 
 	data.control->transpose_x = 0;
 	data.control->transpose_y = 0;
@@ -389,6 +364,8 @@ int main(int argc, char *argv[])
 	mlx_loop_hook(data.mlx, render_map_wrapper, &data);
 	mlx_loop(data.mlx);
 	mlx_terminate(data.mlx);
+
+// cleanup function
 
 	i = 0;
 	while (data.map[i])
@@ -402,7 +379,7 @@ int main(int argc, char *argv[])
 	free(data.control);
 	data.control = NULL;
 
-	return (EXIT_SUCCESS);
+	return (0);
 }
 
 
@@ -412,7 +389,7 @@ int main(int argc, char *argv[])
 // - COLOR PARSING AND GRADIENT !!
 // - MAKEFILE !!
 // - UNDERSTAND YOUR ALGORITHMS))
-
+// - perror or ft_printf ?
 
 // --- CHECK IF .FDF FILE IS FORMATED RIGHT
 	// ???
@@ -421,3 +398,14 @@ int main(int argc, char *argv[])
 // ---- CENTERED ANCHOR POINT
 	// ???
 
+
+	// printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", line_cnt, data.elem);
+	// printf("CALCULATED SCALE: %d\n", data.control->scale);
+
+
+// colors
+
+	// printf("red: %x\n", red);
+	// printf("green: %x\n", green);
+	// printf("blue: %x\n", blue);
+	// printf("in color: %x\n", color);
