@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/07 00:52:25 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/07 19:18:36 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,8 @@
 #include "libft.h"
 #include "MLX42/include/MLX42/MLX42.h"
 
-#define WIDTH 1600
-#define HEIGHT 900
+#define WIDTH 3200
+#define HEIGHT 1800
 #define M_PI 3.14159265358979323846
 
 typedef struct	map_pnt
@@ -108,13 +108,13 @@ static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, 
 	double	sy;
 	double	error;
 	double	e2;
-	
+
 	iso_point(&x0, &y0, &z0, control);
 	iso_point(&x1, &y1, &z1, control);
-	
 
-	// CARPET SETUP	
-	color = color * (z1 - z0) / 0.01;	
+
+	// CARPET SETUP
+	color = color * (z1 - z0) / 0.01;
 	color = shift_color(color, (z1 - z0));
 
 	// ANDREW'S METHOD - JUST RETURNING WHAT IS OUT OF BOUNDS
@@ -173,13 +173,13 @@ static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 	if (keydata.key == MLX_KEY_LEFT_BRACKET && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
 		data->control->scale -= 1;
 	if (keydata.key == MLX_KEY_RIGHT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
-		data->control->transpose_x += 10;
+		data->control->transpose_x += 20;
 	if (keydata.key == MLX_KEY_LEFT && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
-		data->control->transpose_x -= 10;
+		data->control->transpose_x -= 20;
 	if (keydata.key == MLX_KEY_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
-		data->control->transpose_y -= 10;
+		data->control->transpose_y -= 20;
 	if (keydata.key == MLX_KEY_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
-		data->control->transpose_y += 10;
+		data->control->transpose_y += 20;
 	if (keydata.key == MLX_KEY_PAGE_UP && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
 		data->control->rotate -= 0.1;
 	if (keydata.key == MLX_KEY_PAGE_DOWN && (keydata.action == MLX_PRESS || keydata.action == MLX_REPEAT))
@@ -239,19 +239,36 @@ static int	render_map(map_data_t *data)
 
 void render_map_wrapper(void *param)
 {
-	map_data_t *data = (map_data_t*) param;
+	map_data_t	*data;
 
+	data = (map_data_t*) param;
 	render_map((map_data_t*) data);
 	mlx_key_hook(data->mlx, all_keyhooks, data);
 }
 
-int main(int argc, char *argv[])
+int ft_strendswith(const char *str, const char *end)
 {
+	const char	*end0;
 
+	if (!str || !end)
+		return (0);
+	end0 = &str[ft_strlen(str) - ft_strlen(end)];
+	if (ft_strncmp(end0, end, ft_strlen(end)) == 0)
+		return (1);
+	return (0);
+}
+
+int open_file_cnt_lines(int argc, char *argv[])
+{
 	if (argc != 2)
 	{
-		perror("Usage: ./fdf *.fdf");
-		exit(1);
+		perror("Program takes one file of type '.fdf' as argument: ./fdf *.fdf");
+		return (-1);
+	}
+	if (ft_strendswith(argv[1], ".fdf") == 0)
+	{
+		ft_putstr_fd("File must be of type '.fdf'\n", 1);
+		return (-2);
 	}
 
 	char *file_prime = argv[1];
@@ -260,39 +277,39 @@ int main(int argc, char *argv[])
 	if (fd_1 == -1)
 	{
 		perror("Couldn't open file properly");
-		exit(1);
+		return (-3);
 	}
-
-
-	// CHECK FILE_prime FORMAT (ALL ROWS HAVE SAME NUMBER OF ELEMENTS)
-	// COUNT LINES IN A FILE_prime
 
 	char *file_second = argv[1];
 	char *tmp_getline;
 	int fd_2 = open(file_second, O_RDONLY);
 
-	int lines_cnt;
+	int line_cnt;
 
-	lines_cnt = 0;
+	line_cnt = 0;
 	while ((tmp_getline = get_next_line(fd_2)))
 	{
-		lines_cnt++;
+		line_cnt++;
 		free(tmp_getline);
-		// tmp_getline = NULL;
+	}
+	if (line_cnt == 0)
+	{
+		perror("Empty file");
+		return (-4);
 	}
 	if (close(fd_2) < 0)
 	{
-		perror("Couldn't close the map file properly.");
-		exit(1);
+		perror("Couldn't close the file properly");
+		return (-5);
 	}
+	return (line_cnt);
+}
 
-
-	// GET LINE AND SPLIT
-	// POPULATE MAP ARRAY
-
+int main(int argc, char *argv[])
+{
 	map_data_t data;
 
-	data.map = (map_pt_t**) malloc((lines_cnt + 1) * sizeof(map_pt_t*));
+	data.map = (map_pt_t**) malloc((line_cnt + 1) * sizeof(map_pt_t*));
 	uint32_t color = 0x55AAFFFF;
 
 	int i;
@@ -345,7 +362,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", lines_cnt, data.elem);
+	printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", line_cnt, data.elem);
 
 	// SETUP MLX INSATANCE AND DRAW WIREFRAME
 
@@ -361,7 +378,7 @@ int main(int argc, char *argv[])
 	// CONTROLLING PARAMS (SCALE / TRANSPOSE / ROTATE)
 
 	data.control = (ctrl_param_t *) malloc(sizeof(ctrl_param_t));
-	data.control->scale = (int)(((sqrt(WIDTH / data.elem) + sqrt(HEIGHT / lines_cnt))) / (WIDTH / HEIGHT * 1.0));
+	data.control->scale = (int)(((sqrt(WIDTH / data.elem) + sqrt(HEIGHT / line_cnt))) / (WIDTH / HEIGHT * 1.0));
 	printf("CALCULATED SCALE: %d\n", data.control->scale);
 
 	data.control->transpose_x = 0;
@@ -391,28 +408,16 @@ int main(int argc, char *argv[])
 
 // TODO:
 
-// - MAKE TOP VIEW
 // - NORM CODE !
 // - COLOR PARSING AND GRADIENT !!
 // - MAKEFILE !!
 // - UNDERSTAND YOUR ALGORITHMS))
 
 
-// + SOME STRANGE POINTS AND LINES IN DIFF FILES
-	// because of spaces in the end of lines
-// + CRASHES AND LEAKS !!!
-	// DONE!
-// +- REBEL POINTS
-	// fixed by just skipping outborder point recalculating
-	// (maybe come up with original cropping solurion later)
-
+// --- CHECK IF .FDF FILE IS FORMATED RIGHT
+	// ???
 // --- SMOOTHER LINES
 	// ???
 // ---- CENTERED ANCHOR POINT
 	// ???
 
-/* PROBLEMS OPENING FILES:
-
-- passing maps dir crashes the program -- make program to take only <.fdf> files
-
-*/
