@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/08 01:31:44 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/08 20:14:02 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,9 +119,9 @@ while (1)
 
 static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 {
-	map_data_t	*data;
+	data_t	*data;
 
-	data = (map_data_t*) param;
+	data = (data_t*) param;
 	if (keydata.key == MLX_KEY_RIGHT_BRACKET && IS_KEY_PRESSED(keydata))
 		data->control->scale += 1;
 	if (keydata.key == MLX_KEY_LEFT_BRACKET && IS_KEY_PRESSED(keydata))
@@ -146,7 +146,7 @@ static void	all_keyhooks(mlx_key_data_t keydata, void *param)
 		mlx_close_window(data->mlx);
 }
 
-static void	render_bg(map_data_t *data)
+static void	render_bg(data_t *data)
 {
 	int	i;
 	int	j;
@@ -164,7 +164,7 @@ static void	render_bg(map_data_t *data)
 	}
 }
 
-static int	render_map(map_data_t *data)
+static void	render_map(data_t *data)
 {
 	int	i;
 	int	j;
@@ -175,9 +175,7 @@ static int	render_map(map_data_t *data)
 		j = 0;
 		while (j < data->elem - 1)
 		{
-			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y,
-					data->map[i][j].z, data->control->scale * data->map[i][j+1].x, data->control->scale * data->map[i][j+1].y,
-					data->map[i][j+1].z, data->map[i][j].color, data->control);
+			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y, data->map[i][j].z, data->control->scale * data->map[i][j+1].x, data->control->scale * data->map[i][j+1].y, data->map[i][j+1].z, data->map[i][j].color, data->control);
 			j++;
 		}
 		i++;
@@ -188,23 +186,20 @@ static int	render_map(map_data_t *data)
 		i = 0;
 		while (data->map[i + 1] != NULL)
 		{
-			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y,
-					data->map[i][j].z, data->control->scale * data->map[i + 1][j].x, data->control->scale * data->map[i+1][j].y,
-					data->map[i+1][j].z, data->map[i][j].color, data->control);
+			line_draw(data->img, data->control->scale * data->map[i][j].x, data->control->scale * data->map[i][j].y, data->map[i][j].z, data->control->scale * data->map[i + 1][j].x, data->control->scale * data->map[i+1][j].y, data->map[i+1][j].z, data->map[i][j].color, data->control);
 			i++;
 		}
 		j++;
 	}
-	return (0);
 }
 
 void render_map_wrapper(void *param)
 {
-	map_data_t	*data;
+	data_t	*data;
 
-	data = (map_data_t*) param;
-	render_bg((map_data_t*) data);
-	render_map((map_data_t*) data);
+	data = (data_t*) param;
+	render_bg((data_t*) data);
+	render_map((data_t*) data);
 	mlx_key_hook(data->mlx, all_keyhooks, data);
 }
 
@@ -275,77 +270,75 @@ int open_file(int argc, char *filepath)
 	return (fd);
 }
 
-int main(int argc, char *argv[])
+void mem_error(void)
 {
-	int	fd;
-	int	line_cnt;
+	errno = ENOMEM;
+	strerror(errno);
+	exit(1);
+}
 
-	fd = open_file(argc, argv[1]);
-	line_cnt = count_lines(argv[1]);
-	
-	map_data_t data;
-	
-	data.map = (map_pt_t**) malloc((line_cnt + 1) * sizeof(map_pt_t*));
-	uint32_t color = 0x55AAFFFF;
-
-	int i;
-	int j;
-	char *getline;
-	char **line;
+void parse_map(int fd, data_t *data)
+{
+	int		i;
+	int		j;
+	char	*getline;
+	char	**line;
 
 	i = 0;
 	while ((getline = get_next_line(fd)))
 	{
 		line = ft_split(getline, 32);
 		if (!line)
-			return (-3);
+			mem_error();	
+
 		free(getline); // cleanup
 		getline = NULL;
-
-		data.elem = 0;
-		while (line[data.elem])
-			data.elem++;
-
-		if (!(data.map[i] = (map_pt_t*) malloc((data.elem) * sizeof(map_pt_t))))
-		{
-			perror("Could not allocate memory for map during parsing:");
-			exit(1);
-		}
+		
+		data->elem = 0;
+		while (line[data->elem])
+			data->elem++;
+		if (!(data->map[i] = (map_t*) malloc((data->elem) * sizeof(map_t))))
+			mem_error();
 		j = 0;
 		while (line[j])
 		{
-			data.map[i][j].x = j;
-			data.map[i][j].y = i;
-			data.map[i][j].z = ft_atoi(line[j]);
-			data.map[i][j].color = color;
-
+			data->map[i][j].x = j;
+			data->map[i][j].y = i;
+			data->map[i][j].z = ft_atoi(line[j]);
+			data->map[i][j].color = COLOR;
+			
 			free(line[j]); // cleanup
 			line[j] = NULL;
-
 			j++;
 		}
 		free(line); // cleanup
 		line = NULL;
 		i++;
 	}
-	data.map[i] = NULL;
+	data->map[i] = NULL;
+}
 
-	// CLOSE FILE
+int main(int argc, char *argv[])
+{
+	int		fd;
+	int		line_cnt;
+	data_t	data;
 
+	fd = open_file(argc, argv[1]);
+	line_cnt = count_lines(argv[1]);
+	data.map = (map_t**) malloc((line_cnt + 1) * sizeof(map_t*));	
+	parse_map(fd, &data);
 	if (close(fd) < 0)
 	{
-		perror("Couldn't close the map file properly.");
+		ft_putstr_fd("error: Could not close the file properly\n", 1);
 		exit(1);
 	}
-
-
 
 	// SETUP MLX INSATANCE AND DRAW WIREFRAME
 
 
 	if (!(data.mlx = mlx_init(WIDTH, HEIGHT, "FDF", true)))
 		ft_mlxerror();
-
 	data.img = mlx_new_image(data.mlx, WIDTH, HEIGHT);
 	if (!data.img || (mlx_image_to_window(data.mlx, data.img, 0, 0) < 0))
 		ft_mlxerror();
@@ -355,7 +348,6 @@ int main(int argc, char *argv[])
 
 	data.control = (ctrl_param_t *) malloc(sizeof(ctrl_param_t));
 	data.control->scale = (int)(((sqrt(WIDTH / data.elem) + sqrt(HEIGHT / line_cnt))) / (WIDTH / HEIGHT * 1.0));
-
 	data.control->transpose_x = 0;
 	data.control->transpose_y = 0;
 	data.control->rotate = 1.0;
@@ -367,7 +359,7 @@ int main(int argc, char *argv[])
 
 // cleanup function
 
-	i = 0;
+	int i = 0;
 	while (data.map[i])
 	{
 		free(data.map[i]);

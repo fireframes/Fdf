@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:23:34 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/08 01:30:57 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/08 20:00:32 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,16 +26,17 @@
 # define WIDTH 1600
 # define HEIGHT 900
 # define M_PI 3.14159265358979323846
+# define COLOR (uint32_t) 0x55AAFFFF
 # define IS_KEY_PRESSED(keydata) ((keydata.action == MLX_PRESS) \
 		|| (keydata.action == MLX_REPEAT))
 
-typedef struct	map_pnt
+typedef struct	map
 {
 	int			x;
 	int			y;
 	int			z;
 	uint32_t	color;
-}	map_pt_t;
+}	map_t;
 
 typedef struct ctrl_param
 {
@@ -46,13 +47,13 @@ typedef struct ctrl_param
 	float	stretch;
 }	ctrl_param_t;
 
-typedef struct map_data
+typedef struct data
 {
 	mlx_t			*mlx;
 	mlx_image_t		*img;
-	map_pt_t		**map;
+	map_t			**map;
 	ctrl_param_t	*control;
 	int				elem;
-}	map_data_t;
+}	data_t;
 
 #endif

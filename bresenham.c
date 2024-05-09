@@ -6,9 +6,11 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:34:43 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/08 01:34:45 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/08 01:36:31 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+#include "fdf.h"
 
 static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, int z1, uint32_t color, ctrl_param_t *control)
 {
