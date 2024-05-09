@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/28 18:38:10 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/04/25 19:06:22 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/09 22:24:26 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,17 +16,6 @@
 # define BUFFER_SIZE 42
 #endif
 
-static size_t	gnl_strlen(char *s)
-{
-	size_t	len;
-
-	len = 0;
-	if (s)
-		while (s[len])
-			len++;
-	return (len);
-}
-
 static void	gnl_strcat(char *dest, char *src)
 {
 	size_t	i;
@@ -34,8 +23,8 @@ static void	gnl_strcat(char *dest, char *src)
 	size_t	dest_len;
 	size_t	total_len;
 
-	dest_len = gnl_strlen(dest);
-	total_len = dest_len + gnl_strlen(src);
+	dest_len = ft_strlen(dest);
+	total_len = dest_len + ft_strlen(src);
 	i = dest_len;
 	j = 0;
 	while (i < total_len && src[j] != '\0')
@@ -53,7 +42,7 @@ static char	*gnl_strjoin(char *s1, char *s2)
 	size_t	join_len;
 	char	*join_tmp;
 
-	join_len = gnl_strlen(s1) + gnl_strlen(s2) + 1;
+	join_len = ft_strlen(s1) + ft_strlen(s2) + 1;
 	join = (char *) malloc(join_len * sizeof(char));
 	if (join == NULL)
 		return (NULL);
@@ -64,46 +53,6 @@ static char	*gnl_strjoin(char *s1, char *s2)
 	*join_tmp = '\0';
 	gnl_strcat(join, s2);
 	return (join);
-}
-
-static char	*gnl_strchr(char *s, int c)
-{
-	unsigned int	i;
-
-	i = 0;
-	while (s[i])
-	{
-		if (s[i] == (char) c)
-			return (&s[i]);
-		i++;
-	}
-	if (s[i] == (char) c)
-		return (&s[i]);
-	return (0);
-}
-
-static void	*gnl_memmove(void *dest, const void *src, size_t n)
-{
-	unsigned char		*dest_tmp;
-	const unsigned char	*src_tmp;
-
-	if (!dest && !src)
-		return (NULL);
-	dest_tmp = dest;
-	src_tmp = src;
-	if (dest_tmp < src_tmp)
-	{
-		while (n--)
-			*dest_tmp++ = *src_tmp++;
-	}
-	else
-	{
-		dest_tmp += n;
-		src_tmp += n;
-		while (n--)
-			*--dest_tmp = *--src_tmp;
-	}
-	return (dest);
 }
 
 static char	*append_buffer(char *buffer, char *line, char *sep, char *nl_ptr)
@@ -123,7 +72,7 @@ static char	*append_buffer(char *buffer, char *line, char *sep, char *nl_ptr)
 	free(old_line);
 	free(temp_line);
 	if (nl_ptr)
-		gnl_memmove(buffer, nl_ptr + 1, gnl_strlen(nl_ptr + 1) + 1);
+		ft_memmove(buffer, nl_ptr + 1, ft_strlen(nl_ptr + 1) + 1);
 	else
 		buffer[0] = '\0';
 	return (line);
@@ -153,7 +102,7 @@ char	*get_next_line(int fd)
 		if (!buffer[0])
 			if (!read_buffer(fd, buffer, &read_ret))
 				break ;
-		nl_ptr = gnl_strchr(buffer, '\n');
+		nl_ptr = ft_strchr(buffer, '\n');
 		if (nl_ptr)
 			return (line = append_buffer(buffer, line, "\n", nl_ptr));
 		else

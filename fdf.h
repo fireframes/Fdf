@@ -6,54 +6,69 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:23:34 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/08 20:00:32 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/10 01:16:45 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#include <errno.h>
-#include <fcntl.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "libft.h"
-#include "MLX42/include/MLX42/MLX42.h"
 
 #ifndef FDF_H
 # define FDF_H
 
-# define WIDTH 1600
-# define HEIGHT 900
+# include <errno.h>
+# include <fcntl.h>
+# include <math.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include "libft.h"
+# include "MLX42/include/MLX42/MLX42.h"
+
+# define WIDTH 3200
+# define HEIGHT 1800
 # define M_PI 3.14159265358979323846
-# define COLOR (uint32_t) 0x55AAFFFF
-# define IS_KEY_PRESSED(keydata) ((keydata.action == MLX_PRESS) \
-		|| (keydata.action == MLX_REPEAT))
+# define COLOR 0x55AAFFFF
 
-typedef struct	map
+typedef struct s_map
 {
-	int			x;
-	int			y;
-	int			z;
-	uint32_t	color;
-}	map_t;
+	int	x;
+	int	y;
+	int	z;
+	int	color;
+}	t_map;
 
-typedef struct ctrl_param
+typedef struct s_bres_lda
+{
+	double	sx;
+	double	sy;
+	double	error;
+	double	e2;
+}	t_bres_lda;
+
+typedef struct s_control
 {
 	int		scale;
 	int		transpose_x;
 	int		transpose_y;
 	float	rotate;
 	float	stretch;
-}	ctrl_param_t;
+}	t_control;
 
-typedef struct data
+typedef struct s_data
 {
-	mlx_t			*mlx;
-	mlx_image_t		*img;
-	map_t			**map;
-	ctrl_param_t	*control;
-	int				elem;
-}	data_t;
+	mlx_t		*mlx;
+	mlx_image_t	*img;
+	t_map		**map;
+	t_control	*control;
+	int			elem_cnt;
+}	t_data;
+
+int		open_file(int argc, char *filepath);
+int		count_lines(char *filepath);
+void	mem_error(void);
+char	*get_next_line(int fd);
+void	ft_mlxerror(void);
+void	render_engine(void *param);
+void	draw_line(t_data *data, t_map map_p0, t_map map_p1);
+void	bresenhams_lda(t_map p0, t_map p1, mlx_image_t *img);
+void	map_cleanup(t_map **map);
 
 #endif

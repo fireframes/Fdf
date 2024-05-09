@@ -1,0 +1,41 @@
+
+
+// TODO:
+
+// - NORM CODE !
+
+// - BETTER NAMING OF FILES
+
+// - MAKEFILE !!
+// - UNDERSTAND YOUR ALGORITHMS))
+
+
+// --- SMOOTHER LINES
+	// made vars of double type for line drawing part
+
+// ---- CENTERED ANCHOR POINT
+	// ???
+
+
+	// printf("LINE COUNT:  %d\nELEMS COUNT: %d\n", line_cnt, data.elem_cnt);
+	// printf("CALCULATED SCALE: %d\n", data.control->scale);
+
+
+// - COLOR PARSING AND GRADIENT !!
+
+	// printf("red: %x\n", red);
+	// printf("green: %x\n", green);
+	// printf("blue: %x\n", blue);
+	// printf("in color: %x\n", color);
+
+	//uint32_t color = p0.color;
+
+	// uint32_t r_mask = 0x00FFFFFF;
+	// uint32_t g_mask = 0xFF00FFFF;
+	// uint32_t b_mask = 0xFFFF00FF;
+	// int dz = abs(z1 - z0);
+
+	// CARPET SETUP
+	// color = color * (z1 - z0) / 0.01;
+	// color = shift_color(color, (z1 - z0));
+
