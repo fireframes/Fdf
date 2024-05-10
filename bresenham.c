@@ -5,72 +5,69 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/08 01:34:43 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/08 01:36:31 by mmaksimo         ###   ########.fr       */
+/*   Created: 2024/05/10 01:11:37 by mmaksimo          #+#    #+#             */
+/*   Updated: 2024/05/10 23:48:55 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "fdf.h"
 
-static void	line_draw(mlx_image_t *img, int x0, int y0, int z0, int x1, int y1, int z1, uint32_t color, ctrl_param_t *control)
+static uint32_t	shift_color(uint32_t color, int z0, double error, double scale)
 {
-	double	dx;
-	double	dy;
-	double	sx;
-	double	sy;
-	double	error;
-	double	e2;
+	int32_t	red;
+	int32_t	green;
+	int32_t	blue;
+	int32_t	alpha;
 
-	iso_point(&x0, &y0, &z0, control);
-	iso_point(&x1, &y1, &z1, control);
+	// (void) error;
+	red = color >> 24 & 0xFF;
+	green = color >> 16 & 0xFF;
+	blue = color >> 8 & 0xFF;
+	alpha = color & 0xFF;
+	red = (int32_t)round(red + z0 / scale * error) % 256;
+	green = (int32_t)round(green + z0 / scale * error) % 256;
+	blue = (int32_t)round(blue + z0 / scale * error) % 256;
+	color = (red << 24) | (green << 16) | (blue << 8) | alpha;
+	// printf("%lf\n", fabs(error));
+	return (color);
+}
 
+static void	count_dir_error(t_bres_lda *lda, t_map *p0, t_map *p1)
+{
+	lda->sx = -1;
+	if (p0->x < p1->x)
+		lda->sx = 1;
+	lda->sy = -1;
+	if (p0->y < p1->y)
+		lda->sy = 1;
+	lda->error = abs(p1->x - p0->x) - abs(p1->y - p0->y);
+}
 
-	// CARPET SETUP
-	// color = color * (z1 - z0) / 0.01;
-	// color = shift_color(color, (z1 - z0));
+void	bresenham_lda(t_map p0, t_map p1, mlx_image_t *img, t_control *control)
+{
+	t_bres_lda	lda;
 
-	// ANDREW'S METHOD - JUST RETURNING WHAT IS OUT OF BOUNDS
-	if (x0 >= WIDTH || x1 >= WIDTH)
-		return ;
-	else if (y0 >= HEIGHT || y1 >= HEIGHT)
-		return ;
-	else if (x0 < 0 || x1 < 0)
-		return ;
-	else if (y0 < 0 || y1 < 0)
-		return ;
-
-	// BRESENHAM'S LINE DRAWING ALGORITHM
-
-	dx = abs(x1 - x0);
-	dy = -abs(y1 - y0);
-
-	sx = -1;
-	if (x0 < x1)
-		sx = 1;
-	sy = -1;
-	if (y0 < y1)
-		sy = 1;
-	error = dx + dy;
-
-while (1)
+	count_dir_error(&lda, &p0, &p1);
+	while (1)
 	{
-		mlx_put_pixel(img, x0, y0, color);
-		if (x0 == x1 && y0 == y1)
+		mlx_put_pixel(img, p0.x, p0.y,
+					shift_color(COLOR, p0.z, lda.error, control->stretch));
+		if (p0.x == p1.x && p0.y == p1.y)
 			break ;
-		e2 = 2 * error;
-		if (e2 >= dy)
+		lda.e2 = 2 * lda.error;
+		if (lda.e2 >= (-abs(p1.y - p0.y)))
 		{
-			if (x0 == x1)
+			if (p0.x == p1.x)
 				break ;
-			error = error + dy;
-			x0 = x0 + sx;
+			lda.error = lda.error - abs(p1.y - p0.y);
+			p0.x = p0.x + lda.sx;
 		}
-		if (e2 <= dy)
+		if (lda.e2 <= (-abs(p1.y - p0.y)))
 		{
-			if (y0 == y1)
+			if (p0.y == p1.y)
 				break ;
-			error = error + dx;
-			y0 = y0 + sy;
+			lda.error = lda.error + abs(p1.x - p0.x);
+			p0.y = p0.y + lda.sy;
 		}
 	}
 }

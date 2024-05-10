@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/09 22:10:59 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/10 23:47:00 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@ void	init_params(t_control *control, int line_cnt, int elem_cnt)
 	control->transpose_x = 0;
 	control->transpose_y = 0;
 	control->rotate = 1.0;
-	control->stretch = 8.0;
+	control->stretch = 5.33;
 }
 
 void	fill_map(t_map *map, char **line, int i)

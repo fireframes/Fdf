@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:23:34 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/10 01:16:45 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/10 22:53:04 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@
 # define WIDTH 3200
 # define HEIGHT 1800
 # define M_PI 3.14159265358979323846
-# define COLOR 0x55AAFFFF
+# define COLOR 0x249AE3FF
 
 typedef struct s_map
 {
@@ -68,7 +68,7 @@ char	*get_next_line(int fd);
 void	ft_mlxerror(void);
 void	render_engine(void *param);
 void	draw_line(t_data *data, t_map map_p0, t_map map_p1);
-void	bresenhams_lda(t_map p0, t_map p1, mlx_image_t *img);
+void	bresenham_lda(t_map p0, t_map p1, mlx_image_t *img, t_control *control);
 void	map_cleanup(t_map **map);
 
 #endif
