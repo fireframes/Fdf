@@ -6,11 +6,11 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/09 21:52:16 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/09 22:40:53 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/12 23:13:03 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "fdf.h"
+#include "../include/fdf.h"
 
 void	ft_mlxerror(void)
 {

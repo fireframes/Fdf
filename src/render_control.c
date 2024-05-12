@@ -1,23 +1,22 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   render_engine.c                                    :+:      :+:    :+:   */
+/*   render_control.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/09 21:11:49 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/10 22:59:33 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/13 01:18:39 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "fdf.h"
+#include "../include/fdf.h"
 
 static bool	key_pressed(mlx_key_data_t keydata)
 {
 	if ((keydata.action == MLX_PRESS) || (keydata.action == MLX_REPEAT))
 		return (true);
-	else
-		return (false);
+	return (false);
 }
 
 static void	all_keyhooks(mlx_key_data_t keydata, void *param)
@@ -96,7 +95,7 @@ static void	render_map(t_data *data)
 	}
 }
 
-void	render_engine(void *param)
+void	render_control(void *param)
 {
 	t_data	*data;
 

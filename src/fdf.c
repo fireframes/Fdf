@@ -6,11 +6,11 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/22 16:43:59 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/10 23:47:00 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/12 23:28:43 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "fdf.h"
+#include "../include/fdf.h"
 
 void	init_params(t_control *control, int line_cnt, int elem_cnt)
 {
@@ -87,7 +87,7 @@ int	main(int argc, char *argv[])
 		ft_mlxerror();
 	data.control = (t_control *)malloc(sizeof(t_control));
 	init_params(data.control, line_cnt, data.elem_cnt);
-	mlx_loop_hook(data.mlx, render_engine, &data);
+	mlx_loop_hook(data.mlx, render_control, &data);
 	mlx_loop(data.mlx);
 	mlx_terminate(data.mlx);
 	map_cleanup(data.map);

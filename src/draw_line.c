@@ -6,11 +6,11 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:34:43 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/10 22:52:23 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/13 01:20:18 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "fdf.h"
+#include "../include/fdf.h"
 
 static int	iso_point(int *x, int *y, int *z, t_control *control)
 {
@@ -49,5 +49,5 @@ void	draw_line(t_data *data, t_map map_p0, t_map map_p1)
 		return ;
 	if (!iso_point(&p1.x, &p1.y, &p1.z, control))
 		return ;
-	bresenham_lda(p0, p1, img, control);
+	bresenham(p0, p1, img, control);
 }

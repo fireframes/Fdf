@@ -1,30 +1,45 @@
-NAME	:= fdf
-CFLAGS	:= -Wextra -Wall -Werror -Wunreachable-code -Ofast
-LIBMLX	:= MLX42
+NAME = fdf
 
-HEADERS	:= -I ./include -I $(LIBMLX)/include
-LIBS	:= $(LIBMLX)/build/libmlx42.a -ldl -lglfw -pthread -lm
-SRCS	:= $(shell find -iname "*.c")
-OBJS	:= ${SRCS:.c=.o}
+CC = clang-15
 
-all: libmlx $(NAME)
+CFLAGS = -Wextra -Wall -Werror#-Wunreachable-code -Ofast
 
-libmlx:
-	@cmake $(LIBMLX) -B $(LIBMLX)/build && make -C $(LIBMLX)/build -j4
+HEADERS = -I ./include -I $(LIBMLX)
+LIBMLX = ./MLX42/build/libmlx42.a
+LIBFT = ./lib/libft.a
+LIBS = $(LIBMLX) $(LIBFT) -ldl -lglfw -pthread -lm
+
+SRCS_DIR = ./src/
+
+SRCS =	$(SRCS_DIR)bresenham.c \
+		$(SRCS_DIR)draw_line.c \
+		$(SRCS_DIR)fdf.c \
+		$(SRCS_DIR)fdf_utils.c \
+		$(SRCS_DIR)get_next_line.c \
+		$(SRCS_DIR)render_control.c \
+		$(SRCS_DIR)shift_color.c
+
+OBJS = ${SRCS:.c=.o}
+
+all: $(NAME)
+
+# libmlx:
+# 	@cmake $(LIBMLX) -B $(LIBMLX)/build && make -C $(LIBMLX)/build -j4
 
 %.o: %.c
-	@$(CC) $(CFLAGS) -o $@ -c $< $(HEADERS) && printf "Compiling: $(notdir $<)"
+	$(CC) $(CFLAGS) -c $< -o $@ $(HEADERS)
 
 $(NAME): $(OBJS)
 	@$(CC) $(OBJS) $(LIBS) $(HEADERS) -o $(NAME)
 
 clean:
 	@rm -rf $(OBJS)
-	@rm -rf $(LIBMLX)/build
+# @rm -rf $(LIBMLX)/build
 
 fclean: clean
 	@rm -rf $(NAME)
 
-re: clean all
+re: fclean all
 
-.PHONY: all, clean, fclean, re, libmlx
+.PHONY:
+	all, clean, fclean, re
