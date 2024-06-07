@@ -1,10 +1,9 @@
 NAME = fdf
 
-CC = clang-15
+CFLAGS = -Wextra -Wall -Werror
 
-CFLAGS = -Wextra -Wall -Werror#-Wunreachable-code -Ofast
+HEADERS = -Iinclude -I MLX42/include
 
-HEADERS = -I ./include -I $(LIBMLX)
 LIBMLX = ./MLX42/build/libmlx42.a
 LIBFT = ./lib/libft.a
 LIBS = $(LIBMLX) $(LIBFT) -ldl -lglfw -pthread -lm
@@ -23,23 +22,28 @@ OBJS = ${SRCS:.c=.o}
 
 all: $(NAME)
 
-# libmlx:
-# 	@cmake $(LIBMLX) -B $(LIBMLX)/build && make -C $(LIBMLX)/build -j4
+$(LIBMLX):
+	@cd MLX42 && cmake -B build && cmake --build build -j4
 
 %.o: %.c
+	@echo "Compiling $< to $@..."
 	$(CC) $(CFLAGS) -c $< -o $@ $(HEADERS)
 
-$(NAME): $(OBJS)
-	@$(CC) $(OBJS) $(LIBS) $(HEADERS) -o $(NAME)
+$(NAME): $(LIBMLX) $(OBJS)
+	@$(CC) $(OBJS) $(LIBS) -o $(NAME)
+	@echo "Linking object files to create $(NAME)..."
+	@echo "\n\"$(NAME)\" file successfully created!"
+	@echo "To run program: ./$(NAME) <map_file.fdf>"
 
 clean:
-	@rm -rf $(OBJS)
-# @rm -rf $(LIBMLX)/build
+	@echo "Cleaning object files..."
+	rm -rf $(OBJS)
 
 fclean: clean
-	@rm -rf $(NAME)
+	@echo "\nPerforming full clean..."
+	rm -rf $(NAME)
+	rm -rf ./MLX42/build
 
 re: fclean all
 
-.PHONY:
-	all, clean, fclean, re
+.PHONY: all, clean, fclean, re

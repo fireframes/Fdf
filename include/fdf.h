@@ -6,7 +6,7 @@
 /*   By: mmaksimo <mmaksimo@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/08 01:23:34 by mmaksimo          #+#    #+#             */
-/*   Updated: 2024/05/13 01:20:57 by mmaksimo         ###   ########.fr       */
+/*   Updated: 2024/05/15 13:56:40 by mmaksimo         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,8 +22,8 @@
 # include "libft.h"
 # include "../MLX42/include/MLX42/MLX42.h"
 
-# define WIDTH 1600
-# define HEIGHT 1000
+# define WIDTH 3200
+# define HEIGHT 1800
 # define M_PI 3.14159265358979323846
 # define COLOR 0x249AE3FF
 
